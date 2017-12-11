@@ -11,6 +11,9 @@
     <result column="fechaRegistroGPS" jdbcType="TIMESTAMP" property="fechaRegistroGPS" />
     <result column="idVehiculo" jdbcType="INTEGER" property="idVehiculo" />
     <result column="estaTransmitido" jdbcType="VARCHAR" property="estaTransmitido" />
+    <result column="porcentajeCombustible" jdbcType="DECIMAL" property="porcentajeCombustible" />
+    <result column="combustibleAcumulado" jdbcType="BIGINT" property="combustibleAcumulado" />
+    <result column="odometro" jdbcType="BIGINT" property="odometro" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -43,7 +46,7 @@
   </sql>
   <sql id="Base_Column_List">
     idVehiDetalle, latitud, longitud, rumbo, velocidad, evento, fechaRegistroGPS, idVehiculo, 
-    estaTransmitido
+    estaTransmitido, porcentajeCombustible, combustibleAcumulado, odometro
   </sql>
   <select id="selectByExample" parameterType="com.sutran.client.util.CriteriaManager" resultMap="BaseResultMap">
     select
@@ -76,10 +79,12 @@
     </selectKey>
     insert into Gen_tb_VehiculoDetalle (latitud, longitud, rumbo, 
       velocidad, evento, fechaRegistroGPS, 
-      idVehiculo, estaTransmitido)
+      idVehiculo, estaTransmitido, porcentajeCombustible, 
+      combustibleAcumulado, odometro)
     values (#{latitud,jdbcType=DECIMAL}, #{longitud,jdbcType=DECIMAL}, #{rumbo,jdbcType=INTEGER}, 
       #{velocidad,jdbcType=INTEGER}, #{evento,jdbcType=VARCHAR}, #{fechaRegistroGPS,jdbcType=TIMESTAMP}, 
-      #{idVehiculo,jdbcType=INTEGER}, #{estaTransmitido,jdbcType=VARCHAR})
+      #{idVehiculo,jdbcType=INTEGER}, #{estaTransmitido,jdbcType=VARCHAR}, #{porcentajeCombustible,jdbcType=DECIMAL}, 
+      #{combustibleAcumulado,jdbcType=BIGINT}, #{odometro,jdbcType=BIGINT})
   </insert>
   <insert id="insertSelective" parameterType="com.sutran.client.bean.GenTbVehiculodetalle">
     <selectKey keyProperty="idVehiDetalle" order="AFTER" resultType="java.lang.Integer">
@@ -111,6 +116,15 @@
       <if test="estaTransmitido != null">
         estaTransmitido,
       </if>
+      <if test="porcentajeCombustible != null">
+        porcentajeCombustible,
+      </if>
+      <if test="combustibleAcumulado != null">
+        combustibleAcumulado,
+      </if>
+      <if test="odometro != null">
+        odometro,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="latitud != null">
@@ -136,6 +150,15 @@
       </if>
       <if test="estaTransmitido != null">
         #{estaTransmitido,jdbcType=VARCHAR},
+      </if>
+      <if test="porcentajeCombustible != null">
+        #{porcentajeCombustible,jdbcType=DECIMAL},
+      </if>
+      <if test="combustibleAcumulado != null">
+        #{combustibleAcumulado,jdbcType=BIGINT},
+      </if>
+      <if test="odometro != null">
+        #{odometro,jdbcType=BIGINT},
       </if>
     </trim>
   </insert>
@@ -166,6 +189,15 @@
       <if test="estaTransmitido != null">
         estaTransmitido = #{estaTransmitido,jdbcType=VARCHAR},
       </if>
+      <if test="porcentajeCombustible != null">
+        porcentajeCombustible = #{porcentajeCombustible,jdbcType=DECIMAL},
+      </if>
+      <if test="combustibleAcumulado != null">
+        combustibleAcumulado = #{combustibleAcumulado,jdbcType=BIGINT},
+      </if>
+      <if test="odometro != null">
+        odometro = #{odometro,jdbcType=BIGINT},
+      </if>
     </set>
     where idVehiDetalle = #{idVehiDetalle,jdbcType=INTEGER}
   </update>
@@ -178,7 +210,10 @@
       evento = #{evento,jdbcType=VARCHAR},
       fechaRegistroGPS = #{fechaRegistroGPS,jdbcType=TIMESTAMP},
       idVehiculo = #{idVehiculo,jdbcType=INTEGER},
-      estaTransmitido = #{estaTransmitido,jdbcType=VARCHAR}
+      estaTransmitido = #{estaTransmitido,jdbcType=VARCHAR},
+      porcentajeCombustible = #{porcentajeCombustible,jdbcType=DECIMAL},
+      combustibleAcumulado = #{combustibleAcumulado,jdbcType=BIGINT},
+      odometro = #{odometro,jdbcType=BIGINT}
     where idVehiDetalle = #{idVehiDetalle,jdbcType=INTEGER}
   </update>
 </mapper>

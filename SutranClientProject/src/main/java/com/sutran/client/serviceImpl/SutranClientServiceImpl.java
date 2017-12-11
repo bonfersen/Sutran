@@ -5,6 +5,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,6 +30,7 @@ import com.sutran.client.util.ValidateUtil;
 import com.wirelesscar.dynafleet.api.DynafleetAPI;
 import com.wirelesscar.dynafleet.api.DynafleetAPIException;
 import com.wirelesscar.dynafleet.api.LoginService;
+import com.wirelesscar.dynafleet.api.ReportService;
 import com.wirelesscar.dynafleet.api.TrackingService;
 import com.wirelesscar.dynafleet.api.VehicleAndDriverAdminService;
 import com.wirelesscar.dynafleet.api.types.ApiInteger;
@@ -38,6 +40,9 @@ import com.wirelesscar.dynafleet.api.types.ApiSessionId;
 import com.wirelesscar.dynafleet.api.types.ApiTrackingDataV2ArrayTO;
 import com.wirelesscar.dynafleet.api.types.ApiTrackingDataV2TO;
 import com.wirelesscar.dynafleet.api.types.ApiVADAdminGetVehicleTO;
+import com.wirelesscar.dynafleet.api.types.ApiVehicleDataEntryExtendedTO;
+import com.wirelesscar.dynafleet.api.types.ApiVehicleDataExtendedArrayTO;
+import com.wirelesscar.dynafleet.api.types.ApiVehicleDataExtendedTO;
 import com.wirelesscar.dynafleet.api.types.ApiVehicleId;
 import com.wirelesscar.dynafleet.api.types.ApiVehicleInfoV2ArrayTO;
 import com.wirelesscar.dynafleet.api.types.ApiVehicleInfoV2TO;
@@ -104,6 +109,9 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 			apiSessionIdLogin = portLogin.login(apiLoginLoginTO);
 			logger.info("Login successful: " + apiSessionIdLogin.getId());
 		
+			// Horometro, horas de uso acumulado
+			//getHorometro(apiSessionIdLogin, genTbFlota);	
+			
 			saveVehiclesData(apiSessionIdLogin, genTbFlota);
 			
 			/*logger.debug("---------Invoking logout...");
@@ -120,6 +128,9 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 				this.sleep(SutranClientConstants.TIEMPO_ESPERA_CONSUMO_WEBSERVICE_POR_LOGIN);
 				loginCounter = 0;
 			}
+			
+							
+						
 		}
 		logger.info("-----------------------Finalizo proceso de almacenamiento de todos los usuarios. Id Hilo: " + this.getId() + 
 				", Fecha/Hora: " + new Date());
@@ -238,13 +249,31 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 				Integer velocidad = new Integer(String.valueOf(apiTrackingDataV2TO.getMomentaneousVehicleSpeed().getValue()).toString());
 				genTbVehiculodetalle.setVelocidad(velocidad);
 			}
+			
 			logger.debug("getNewTrackingDataV2.getTriggerType=" + apiTrackingDataV2TO.getTriggerType());
 			genTbVehiculodetalle.setEvento(apiTrackingDataV2TO.getTriggerType());
+			// Fecha de evento GPS
 			if (ValidateUtil.isNotEmpty(apiPositionTO.getPositionTime())) {
-				GregorianCalendar positionGregorianCalendar = apiPositionTO.getPositionTime().getValue().toGregorianCalendar();// Fecha
+				GregorianCalendar positionGregorianCalendar = apiPositionTO.getPositionTime().getValue().toGregorianCalendar();
 				logger.debug("getNewTrackingDataV2.getFechaRegistroGPS=" + positionGregorianCalendar.getTime().toString());
 				genTbVehiculodetalle.setFechaRegistroGPS(positionGregorianCalendar.getTime());
 			}
+			// Porcentaje de tanque de combustible
+			if (ValidateUtil.isNotEmpty(apiTrackingDataV2TO.getCurrentFuelLevel())) {
+				logger.debug("apiTrackingDataV2TO.getCurrentFuelLevel=" + apiTrackingDataV2TO.getCurrentFuelLevel().getValue());
+				genTbVehiculodetalle.setPorcentajeCombustible(new BigDecimal(apiTrackingDataV2TO.getCurrentFuelLevel().getValue()));
+			}
+			// Total de Combustible consumido en centilitres
+			if (ValidateUtil.isNotEmpty(apiTrackingDataV2TO.getAccumulatedFuelConsumption())) {
+				logger.debug("apiTrackingDataV2TO.getAccumulatedFuelConsumption=" + apiTrackingDataV2TO.getAccumulatedFuelConsumption().getValue());
+				genTbVehiculodetalle.setCombustibleAcumulado(apiTrackingDataV2TO.getAccumulatedFuelConsumption().getValue());
+			}
+			// Odometro, kilometraje acumulado
+			if (ValidateUtil.isNotEmpty(apiTrackingDataV2TO.getOdometer())) {
+				logger.debug("apiTrackingDataV2TO.getOdometer=" + apiTrackingDataV2TO.getOdometer().getValue());
+				genTbVehiculodetalle.setOdometro(apiTrackingDataV2TO.getOdometer().getValue());
+			}
+				
 			genTbVehiculodetalle.setEstaTransmitido(SutranClientConstants.CERO);
 			genTbVehiculodetalleService.save(genTbVehiculodetalle);
 			logger.info("Se almaceno informacion de detalle del vehiculo");
@@ -256,8 +285,36 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 				functionCounterVehiclesDetails = 0;
 			}*/
 		}
+		
+		// Se busca el Horometro, horas de uso acumulado
+		ReportService portReportService = getURLConnection().getReportServicePort();  
+		ApiVehicleDataExtendedArrayTO apiVehicleDataExtendedArrayTO = portReportService.getNewVehicleReportDataExtended(apiSessionIdLogin);
+		List<ApiVehicleDataExtendedTO> lstApiVehicleDataExtendedTO = apiVehicleDataExtendedArrayTO.getArray();
+		int indice = 0;
+		System.out.println("XXXXXXXXX");
+		for(ApiVehicleDataExtendedTO apiVehicleDataExtendedTO : lstApiVehicleDataExtendedTO) {
+			indice++;
+			String vehiculo = null;
+			String registro = null;
+			List<ApiVehicleDataEntryExtendedTO> lstApiVehicleDataEntryExtendedTO = apiVehicleDataExtendedTO.getDataEntries();
+			vehiculo = apiVehicleDataExtendedTO.getVehicleId().getId() + ",";
+			
+			// Buscar el id del vehiculo en base de datos local
+			Long idVehiculoApi2 = apiVehicleDataExtendedTO.getVehicleId().getId();
+			GenTbVehiculo genTbVehiculoTemp2 = selectVehiculoByIdVehiculoApi(idVehiculoApi2, genTbFlota.getIdFlota());
+			
+			if(ValidateUtil.isNotEmpty(genTbVehiculoTemp2)) {
+			for(ApiVehicleDataEntryExtendedTO apiVehicleDataEntryExtendedTO : lstApiVehicleDataEntryExtendedTO) {
+				registro = apiVehicleDataEntryExtendedTO.getEngineOnSeconds().getValue() + "," + 
+				apiVehicleDataEntryExtendedTO.getStartTime().getValue().toGregorianCalendar().getTime().toString()+ "," + 
+				apiVehicleDataEntryExtendedTO.getEndTime().getValue().toGregorianCalendar().getTime().toString()+ "," + 
+				apiVehicleDataEntryExtendedTO.getEconomySeconds().getValue()+ "," + apiVehicleDataEntryExtendedTO.getTopGearSeconds().getValue();
+			}
+			System.out.println(indice + "," + vehiculo + "," + genTbVehiculoTemp2.getVin() + "," + registro);
+			}
+		}
 	}
-
+	
 	private DynafleetAPI getURLConnection() {
 		URL wsdlURL = DynafleetAPI.WSDL_LOCATION;
 		return new DynafleetAPI(wsdlURL, SutranClientConstants.SERVICE_NAME);

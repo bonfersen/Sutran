@@ -63,13 +63,13 @@
 				identity="true" />
 		</table-->
 		
-		<table tableName='Gen_tb_Vehiculo'
+		<table tableName='Gen_tb_VehiculoDetalle'
 			enableCountByExample='false' enableDeleteByExample='false'
 			enableUpdateByExample='false' selectByPrimaryKeyQueryId='false'
 			selectByExampleQueryId='false' enableSelectByExample='true'
 			modelType='flat'>
 			<property name='useActualColumnNames' value='true' />
-			<generatedKey column="idVehiculo" sqlStatement="SELECT @@IDENTITY"
+			<generatedKey column="idVehiDetalle" sqlStatement="SELECT @@IDENTITY"
 				identity="true" />
 		</table>
 

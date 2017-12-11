@@ -22,6 +22,12 @@ public class GenTbVehiculodetalle {
 
     private String estaTransmitido;
 
+    private BigDecimal porcentajeCombustible;
+
+    private Long combustibleAcumulado;
+
+    private Long odometro;
+
     public Integer getIdVehiDetalle() {
         return idVehiDetalle;
     }
@@ -92,5 +98,29 @@ public class GenTbVehiculodetalle {
 
     public void setEstaTransmitido(String estaTransmitido) {
         this.estaTransmitido = estaTransmitido;
+    }
+
+    public BigDecimal getPorcentajeCombustible() {
+        return porcentajeCombustible;
+    }
+
+    public void setPorcentajeCombustible(BigDecimal porcentajeCombustible) {
+        this.porcentajeCombustible = porcentajeCombustible;
+    }
+
+    public Long getCombustibleAcumulado() {
+        return combustibleAcumulado;
+    }
+
+    public void setCombustibleAcumulado(Long combustibleAcumulado) {
+        this.combustibleAcumulado = combustibleAcumulado;
+    }
+
+    public Long getOdometro() {
+        return odometro;
+    }
+
+    public void setOdometro(Long odometro) {
+        this.odometro = odometro;
     }
 }
