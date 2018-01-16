@@ -109,16 +109,12 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 			apiSessionIdLogin = portLogin.login(apiLoginLoginTO);
 			logger.info("Login successful: " + apiSessionIdLogin.getId());
 		
+			// Se almacena la informacion de uso de la flota
+			saveVehiclesData(apiSessionIdLogin, genTbFlota);
+			
 			// Horometro, horas de uso acumulado
 			//getHorometro(apiSessionIdLogin, genTbFlota);	
 			
-			saveVehiclesData(apiSessionIdLogin, genTbFlota);
-			
-			/*logger.debug("---------Invoking logout...");
-			ApiSessionId apiSessionIdLogout = new ApiSessionId();
-			apiSessionIdLogout.setId(apiSessionIdLogin.getId());
-			portLogin.logout(apiSessionIdLogout);*/
-
 			logger.info("Finalizo proceso de almacenamiento del usuario: " + genTbFlota.getIdFlota() + " - " + genTbFlota.getNombreFlota() + 
 					", id Hilo: " + this.getId() + ", Fecha/Hora: " + new Date());
 			
@@ -129,7 +125,11 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 				loginCounter = 0;
 			}
 			
-							
+			// Cerrando Sesion
+			logger.debug("---------Invoking logout...");
+			ApiSessionId apiSessionIdLogout = new ApiSessionId();
+			apiSessionIdLogout.setId(apiSessionIdLogin.getId());
+			portLogin.logout(apiSessionIdLogout);				
 						
 		}
 		logger.info("-----------------------Finalizo proceso de almacenamiento de todos los usuarios. Id Hilo: " + this.getId() + 
@@ -287,7 +287,7 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 		}
 		
 		// Se busca el Horometro, horas de uso acumulado
-		ReportService portReportService = getURLConnection().getReportServicePort();  
+		/*ReportService portReportService = getURLConnection().getReportServicePort();  
 		ApiVehicleDataExtendedArrayTO apiVehicleDataExtendedArrayTO = portReportService.getNewVehicleReportDataExtended(apiSessionIdLogin);
 		List<ApiVehicleDataExtendedTO> lstApiVehicleDataExtendedTO = apiVehicleDataExtendedArrayTO.getArray();
 		int indice = 0;
@@ -312,7 +312,7 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 			}
 			System.out.println(indice + "," + vehiculo + "," + genTbVehiculoTemp2.getVin() + "," + registro);
 			}
-		}
+		}*/
 	}
 	
 	private DynafleetAPI getURLConnection() {

@@ -5,7 +5,7 @@
 						http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
 
     <!-- For times when you need more complex processing, passing data to the scheduled job -->
-    <bean name="complexJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+    <bean name="sutranClientScheduledJob" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
         <property name="jobClass" value="com.sutran.client.main.SutranClientScheduledJob" />
         <property name="jobDataMap">
             <map>
@@ -15,25 +15,31 @@
         <property name="durability" value="true" />
     </bean>
  
- 
-    <!-- Run the job -->
-    <bean id="cronTrigger"  class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
-        <property name="jobDetail" ref="complexJobDetail" />
-        <property name="cronExpression" value="0 0/3 * * * ?" />
+ 	<!-- Run the job every hour with initial delay of 1 second -->
+    <bean id="simpleTrigger"  class="org.springframework.scheduling.quartz.SimpleTriggerFactoryBean">
+        <property name="jobDetail" ref="sutranClientScheduledJob" />
+        <property name="startDelay" value="1000" />
+        <property name="repeatInterval" value="3600000" />
     </bean>
+ 
+    <!-- Run the job by cron -->
+    <!-- bean id="cronTrigger"  class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="sutranClientScheduledJob" />
+        <property name="cronExpression" value="0 0 0/1 * * ?" />
+    </bean-->
  
  
     <!-- Scheduler factory bean to glue together jobDetails and triggers to Configure Quartz Scheduler -->
     <bean  class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
         <property name="jobDetails">
             <list>
-                <ref bean="complexJobDetail" />
+                <ref bean="sutranClientScheduledJob" />
             </list>
         </property>
  
         <property name="triggers">
             <list>
-                <ref bean="cronTrigger" />
+                <ref bean="simpleTrigger" />
             </list>
         </property>
     </bean>

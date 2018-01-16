@@ -20,6 +20,9 @@ public class SutranClientScheduledJob extends QuartzJobBean {
 			sutranClientService.startConectionDynafleeApi();
 		} catch (DynafleetAPIException e) {
 			logger.error("Error DynafleetAPIException: ", e);
+			logger.error("Descripcion: " + e.getFaultInfo().getExceptionInfo().getDescription());
+			logger.error("Error Code: " + e.getFaultInfo().getExceptionInfo().getErrorCode());
+			logger.error("Id: " + e.getFaultInfo().getExceptionInfo().getId());
 		} catch (Exception e) {
 			logger.error("Error Exception: ", e);
 		}
