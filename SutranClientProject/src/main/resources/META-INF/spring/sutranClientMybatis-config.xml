@@ -8,5 +8,6 @@
 	    <mapper resource="META-INF/spring/mappers/GenTbFlotaMapper.xml" />
 	    <mapper resource="META-INF/spring/mappers/GenTbVehiculodetalleMapper.xml" />
 	    <mapper resource="META-INF/spring/mappers/GenTbVehiculoMapper.xml" />
+	    <mapper resource="META-INF/spring/mappers/GenTbHorometroMapper.xml" />
 	</mappers>
 </configuration>

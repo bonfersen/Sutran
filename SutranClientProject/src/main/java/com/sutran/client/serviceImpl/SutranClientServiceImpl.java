@@ -15,10 +15,12 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sutran.client.bean.GenTbFlota;
+import com.sutran.client.bean.GenTbHorometro;
 import com.sutran.client.bean.GenTbVehiculo;
 import com.sutran.client.bean.GenTbVehiculodetalle;
 import com.sutran.client.main.SutranClientScheduledJob;
 import com.sutran.client.service.GenTbFlotaService;
+import com.sutran.client.service.GenTbHorometroService;
 import com.sutran.client.service.GenTbVehiculoService;
 import com.sutran.client.service.GenTbVehiculodetalleService;
 import com.sutran.client.service.SutranClientService;
@@ -62,6 +64,9 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 	@Autowired
 	private GenTbVehiculodetalleService genTbVehiculodetalleService;
 
+	@Autowired
+	private GenTbHorometroService genTbHorometroService;
+
 	@Transactional(propagation = Propagation.REQUIRED, readOnly = false)
 	public int saveVehiculo(GenTbVehiculo bean) throws Exception {
 		return genTbVehiculoService.save(bean);
@@ -89,7 +94,7 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 
 		return (lstGenTbVehiculo.size() > 0) ? lstGenTbVehiculo.get(0) : null;
 	}
-	
+
 	public void startConectionDynafleeApi() throws DynafleetAPIException, Exception {
 		logger.info("Iniciando comunicacion con los servicios de Dynafleet");
 		LoginService portLogin = getURLConnection().getLoginServicePort();
@@ -108,38 +113,40 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 
 			apiSessionIdLogin = portLogin.login(apiLoginLoginTO);
 			logger.info("Login successful: " + apiSessionIdLogin.getId());
-		
+
 			// Se almacena la informacion de uso de la flota
 			saveVehiclesData(apiSessionIdLogin, genTbFlota);
-			
+
 			// Horometro, horas de uso acumulado
-			//getHorometro(apiSessionIdLogin, genTbFlota);	
-			
-			logger.info("Finalizo proceso de almacenamiento del usuario: " + genTbFlota.getIdFlota() + " - " + genTbFlota.getNombreFlota() + 
-					", id Hilo: " + this.getId() + ", Fecha/Hora: " + new Date());
-			
+			// getHorometro(apiSessionIdLogin, genTbFlota);
+
+			logger.info("Finalizo proceso de almacenamiento del usuario: " + genTbFlota.getIdFlota() + " - " + genTbFlota.getNombreFlota() + ", id Hilo: "
+					+ this.getId() + ", Fecha/Hora: " + new Date());
+
 			loginCounter++;
 			if (loginCounter == SutranClientConstants.MAX_CANTIDAD_CONSUMOS_LOGIN) {
 				logger.info("Se llego al maximo consumo de metodos en Login: " + loginCounter);
 				this.sleep(SutranClientConstants.TIEMPO_ESPERA_CONSUMO_WEBSERVICE_POR_LOGIN);
 				loginCounter = 0;
 			}
-			
+
 			// Cerrando Sesion
 			logger.debug("---------Invoking logout...");
 			ApiSessionId apiSessionIdLogout = new ApiSessionId();
 			apiSessionIdLogout.setId(apiSessionIdLogin.getId());
-			portLogin.logout(apiSessionIdLogout);				
-						
+			portLogin.logout(apiSessionIdLogout);
+
 		}
-		logger.info("-----------------------Finalizo proceso de almacenamiento de todos los usuarios. Id Hilo: " + this.getId() + 
-				", Fecha/Hora: " + new Date());
+		logger.info(
+				"-----------------------Finalizo proceso de almacenamiento de todos los usuarios. Id Hilo: " + this.getId() + ", Fecha/Hora: " + new Date());
 	}
-	
+
 	@Transactional(propagation = Propagation.REQUIRED, readOnly = false)
 	private void saveVehiclesData(ApiSessionId apiSessionIdLogin, GenTbFlota genTbFlota) throws DynafleetAPIException, Exception {
 		VehicleAndDriverAdminService portVehicleAndDriver = getURLConnection().getVehicleAndDriverAdminServicePort();
 		ApiVehicleId apiVehicleId = null;
+		boolean seEncontroDetalleVehiculo = false;
+		boolean seEncontroHorometro = false;
 		int functionCounterVehicles = 0;
 		int functionCounterVehiclesDetails = 0;
 
@@ -186,11 +193,17 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 			if (ValidateUtil.isEmpty(genTbVehiculoTemp)) {
 				this.saveVehiculo(genTbVehiculo);
 				logger.info("Se almaceno informacion de vehiculo");
-			} else {
-				logger.debug("El Id de vehiculo existe");
+			} 
+			else if (ValidateUtil.isNotEmpty(genTbVehiculoTemp) && ValidateUtil.isEmpty(genTbVehiculoTemp.getVin())) {
+				genTbVehiculo.setIdVehiculo(genTbVehiculoTemp.getIdVehiculo());
+				this.saveVehiculo(genTbVehiculo);
+				logger.info("El VIN se actualizo");
 			}
-			
-			functionCounterVehicles ++;
+			else {
+				logger.debug("El vehiculo existe");
+			}
+
+			functionCounterVehicles++;
 			if (functionCounterVehicles == SutranClientConstants.MAX_CANTIDAD_CONSUMOS_METODO) {
 				logger.info("Se llego al maximo consumo de metodos en getVehiclesV2: " + functionCounterVehicles);
 				this.sleep(SutranClientConstants.TIEMPO_ESPERA_CONSUMO_WEBSERVICE_POR_METODO);
@@ -199,7 +212,7 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 		}
 
 		/*
-		 * Obtener vehiculo getNewTrackingDataV2: longitud, latitud, speed, event, date number per vehicle
+		 * Obtener vehiculo getNewTrackingDataV2: longitud, latitud, speed, event, etc
 		 */
 		TrackingService portTrackingService = getURLConnection().getTrackingServicePort();
 		logger.debug("---------Invoking getNewTrackingDataV2...");
@@ -210,6 +223,7 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 			Double latitudApi = null;
 			Double longitudApi = null;
 			GenTbVehiculodetalle genTbVehiculodetalle = new GenTbVehiculodetalle();
+			seEncontroDetalleVehiculo = true;
 
 			// Buscar el id del vehiculo en base de datos local
 			Long idVehiculoApi = apiTrackingDataV2TO.getVehicleId().getId();
@@ -249,7 +263,7 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 				Integer velocidad = new Integer(String.valueOf(apiTrackingDataV2TO.getMomentaneousVehicleSpeed().getValue()).toString());
 				genTbVehiculodetalle.setVelocidad(velocidad);
 			}
-			
+
 			logger.debug("getNewTrackingDataV2.getTriggerType=" + apiTrackingDataV2TO.getTriggerType());
 			genTbVehiculodetalle.setEvento(apiTrackingDataV2TO.getTriggerType());
 			// Fecha de evento GPS
@@ -273,48 +287,60 @@ public class SutranClientServiceImpl extends Thread implements SutranClientServi
 				logger.debug("apiTrackingDataV2TO.getOdometer=" + apiTrackingDataV2TO.getOdometer().getValue());
 				genTbVehiculodetalle.setOdometro(apiTrackingDataV2TO.getOdometer().getValue());
 			}
-				
+
 			genTbVehiculodetalle.setEstaTransmitido(SutranClientConstants.CERO);
 			genTbVehiculodetalleService.save(genTbVehiculodetalle);
-			logger.info("Se almaceno informacion de detalle del vehiculo");
 			
-			/*functionCounterVehiclesDetails++;
-			if (functionCounterVehiclesDetails == SutranClientConstants.MAX_CANTIDAD_CONSUMOS_METODO) {
-				logger.info("Se llego al maximo consumo de metodos en getNewTrackingDataV2: " + functionCounterVehiclesDetails);
-				this.sleep(SutranClientConstants.TIEMPO_ESPERA_CONSUMO_WEBSERVICE_POR_METODO);
-				functionCounterVehiclesDetails = 0;
-			}*/
+			/*
+			 * functionCounterVehiclesDetails++; if (functionCounterVehiclesDetails == SutranClientConstants.MAX_CANTIDAD_CONSUMOS_METODO) { logger.info(
+			 * "Se llego al maximo consumo de metodos en getNewTrackingDataV2: " + functionCounterVehiclesDetails);
+			 * this.sleep(SutranClientConstants.TIEMPO_ESPERA_CONSUMO_WEBSERVICE_POR_METODO); functionCounterVehiclesDetails = 0; }
+			 */
 		}
-		
+		if (seEncontroDetalleVehiculo)
+			logger.info("Termino proceso de almacenamiento de informacion de detalle del vehiculo");
+		else
+			logger.info("No se encontro informacion de detalle del vehiculo");
+
 		// Se busca el Horometro, horas de uso acumulado
-		/*ReportService portReportService = getURLConnection().getReportServicePort();  
+		ReportService portReportService = getURLConnection().getReportServicePort();
 		ApiVehicleDataExtendedArrayTO apiVehicleDataExtendedArrayTO = portReportService.getNewVehicleReportDataExtended(apiSessionIdLogin);
 		List<ApiVehicleDataExtendedTO> lstApiVehicleDataExtendedTO = apiVehicleDataExtendedArrayTO.getArray();
-		int indice = 0;
-		System.out.println("XXXXXXXXX");
-		for(ApiVehicleDataExtendedTO apiVehicleDataExtendedTO : lstApiVehicleDataExtendedTO) {
-			indice++;
-			String vehiculo = null;
-			String registro = null;
+
+		logger.debug("---------Invoking Horometro");
+		for (ApiVehicleDataExtendedTO apiVehicleDataExtendedTO : lstApiVehicleDataExtendedTO) {
 			List<ApiVehicleDataEntryExtendedTO> lstApiVehicleDataEntryExtendedTO = apiVehicleDataExtendedTO.getDataEntries();
-			vehiculo = apiVehicleDataExtendedTO.getVehicleId().getId() + ",";
-			
+
 			// Buscar el id del vehiculo en base de datos local
 			Long idVehiculoApi2 = apiVehicleDataExtendedTO.getVehicleId().getId();
 			GenTbVehiculo genTbVehiculoTemp2 = selectVehiculoByIdVehiculoApi(idVehiculoApi2, genTbFlota.getIdFlota());
-			
-			if(ValidateUtil.isNotEmpty(genTbVehiculoTemp2)) {
-			for(ApiVehicleDataEntryExtendedTO apiVehicleDataEntryExtendedTO : lstApiVehicleDataEntryExtendedTO) {
-				registro = apiVehicleDataEntryExtendedTO.getEngineOnSeconds().getValue() + "," + 
-				apiVehicleDataEntryExtendedTO.getStartTime().getValue().toGregorianCalendar().getTime().toString()+ "," + 
-				apiVehicleDataEntryExtendedTO.getEndTime().getValue().toGregorianCalendar().getTime().toString()+ "," + 
-				apiVehicleDataEntryExtendedTO.getEconomySeconds().getValue()+ "," + apiVehicleDataEntryExtendedTO.getTopGearSeconds().getValue();
+
+			if (ValidateUtil.isNotEmpty(genTbVehiculoTemp2)) {
+				for (ApiVehicleDataEntryExtendedTO apiVehicleDataEntryExtendedTO : lstApiVehicleDataEntryExtendedTO) {
+					seEncontroHorometro = true;
+					GenTbHorometro genTbHorometro = new GenTbHorometro();
+					logger.debug("apiVehicleDataEntryExtendedTO.getEngineOnSeconds=" + apiVehicleDataEntryExtendedTO.getEngineOnSeconds().getValue());
+					genTbHorometro.setHorometro(apiVehicleDataEntryExtendedTO.getEngineOnSeconds().getValue());
+					logger.debug("apiVehicleDataEntryExtendedTO.getStartTime="
+							+ apiVehicleDataEntryExtendedTO.getStartTime().getValue().toGregorianCalendar().getTime().toString());
+					genTbHorometro.setFechaInicio(apiVehicleDataEntryExtendedTO.getStartTime().getValue().toGregorianCalendar().getTime());
+					logger.debug("apiVehicleDataEntryExtendedTO.getEndTime="
+							+ apiVehicleDataEntryExtendedTO.getEndTime().getValue().toGregorianCalendar().getTime().toString());
+					genTbHorometro.setFechaFin(apiVehicleDataEntryExtendedTO.getEndTime().getValue().toGregorianCalendar().getTime());
+					logger.debug(
+							"apiVehicleDataEntryExtendedTO.getIdVehiculo=" + String.valueOf(apiVehicleDataExtendedTO.getVehicleId().getId()).toString());
+					genTbHorometro.setIdVehiculo(genTbVehiculoTemp2.getIdVehiculo());
+					
+					genTbHorometroService.save(genTbHorometro);
+				}
 			}
-			System.out.println(indice + "," + vehiculo + "," + genTbVehiculoTemp2.getVin() + "," + registro);
-			}
-		}*/
+		}		
+		if (seEncontroHorometro)
+			logger.info("Termino proceso de almacenamiento de informacion de Horometro");
+		else
+			logger.info("No se encontro informacion de Horometro");
 	}
-	
+
 	private DynafleetAPI getURLConnection() {
 		URL wsdlURL = DynafleetAPI.WSDL_LOCATION;
 		return new DynafleetAPI(wsdlURL, SutranClientConstants.SERVICE_NAME);

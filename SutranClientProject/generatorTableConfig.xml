@@ -18,7 +18,7 @@
 		<!-- Par&aacute;metros de conexi&oacute;n a la bd -->
 		<jdbcConnection driverClass="com.microsoft.sqlserver.jdbc.SQLServerDriver"
 			connectionURL="jdbc:sqlserver://DESKTOP-QNKRE8K\MSSQLSERVER;DatabaseName=SUTRAN"
-			userId="usr_seo" password="*/77/956BD*">
+			userId="sa" password="campoy">
 		</jdbcConnection>
 
 		<javaModelGenerator targetPackage="com.sutran.client.bean"
@@ -63,13 +63,13 @@
 				identity="true" />
 		</table-->
 		
-		<table tableName='Gen_tb_VehiculoDetalle'
+		<table tableName='Gen_tb_Horometro'
 			enableCountByExample='false' enableDeleteByExample='false'
 			enableUpdateByExample='false' selectByPrimaryKeyQueryId='false'
 			selectByExampleQueryId='false' enableSelectByExample='true'
 			modelType='flat'>
 			<property name='useActualColumnNames' value='true' />
-			<generatedKey column="idVehiDetalle" sqlStatement="SELECT @@IDENTITY"
+			<generatedKey column="idHorometro" sqlStatement="SELECT @@IDENTITY"
 				identity="true" />
 		</table>
 
