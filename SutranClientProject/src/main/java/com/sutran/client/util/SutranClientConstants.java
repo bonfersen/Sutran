@@ -9,8 +9,8 @@ public class SutranClientConstants {
 	/*
 	 * URL Webservice
 	 */
-	public static final String WEBSERVICE_DYNAFLEET_URL = "https://api-preprod.dynafleetonline.com/wsdl";
-	//public static final String WEBSERVICE_DYNAFLEET_URL = "https://api2.dynafleetonline.com/wsdl";
+	//public static final String WEBSERVICE_DYNAFLEET_URL = "https://api-preprod.dynafleetonline.com/wsdl";
+	public static final String WEBSERVICE_DYNAFLEET_URL = "https://api2.dynafleetonline.com/wsdl";
 	
 	public static final String[] CONTEXT_PATHS = new String[] {
 			"classpath:/META-INF/spring/sutranClientApplicationContext.xml", 
